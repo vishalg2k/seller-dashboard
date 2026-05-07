@@ -181,8 +181,7 @@ const SellerDashboard = () => {
 
   const filteredLeads = useMemo(() => {
     return MOCK_LEADS.filter(lead => {
-      const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            lead.id.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesPrice = filters.price ? lead.price === filters.price : true;
       const matchesBhk = filters.bhk ? lead.bhk === filters.bhk : true;
       const matchesType = filters.type ? lead.type === filters.type : true;
@@ -261,7 +260,7 @@ const SellerDashboard = () => {
                 <Search size={18} className="search-icon" />
                 <input
                   type="text"
-                  placeholder="Search by ID or Name..."
+                  placeholder="Search by Name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -378,7 +377,6 @@ const SellerDashboard = () => {
                         }}
                       />
                     </th>
-                    <th>Lead ID</th>
                     <th><div className="th-content"><User size={14} /> Name</div></th>
                     <th><div className="th-content"><Phone size={14} /> Contact</div></th>
                     <th><div className="th-content"><Building2 size={14} /> City</div></th>
@@ -404,7 +402,6 @@ const SellerDashboard = () => {
                               onChange={() => !isBought && toggleSelect(lead.id)}
                             />
                           </td>
-                          <td className="lead-id">{lead.id}</td>
                           <td className="lead-name">{lead.name}</td>
                           <td className="lead-number">
                             {isBought ? (
@@ -458,7 +455,7 @@ const SellerDashboard = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan="10" className="no-results">
+                      <td colSpan="9" className="no-results">
                         No leads found matching your criteria.
                       </td>
                     </tr>
@@ -532,15 +529,6 @@ function PaymentModal({ leads, status, onClose, onPay }) {
                 <div className="summary-row"><span>Leads selected</span><strong>{leads.length}</strong></div>
                 <div className="summary-row"><span>Price per lead</span><strong>₹{LEAD_PRICE}</strong></div>
                 <div className="summary-row total"><span>Total payable</span><strong>₹{total}</strong></div>
-              </div>
-              <div className="modal-leads">
-                {leads.map(l => (
-                  <div className="modal-lead-item" key={l.id}>
-                    <span className="modal-lead-id">{l.id}</span>
-                    <span className="modal-lead-name">{l.name}</span>
-                    <span className="modal-lead-loc">{l.locality}, {l.city}</span>
-                  </div>
-                ))}
               </div>
             </div>
             <div className="modal-foot">
