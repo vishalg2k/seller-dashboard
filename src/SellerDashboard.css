@@ -168,6 +168,54 @@
   font-size: 13px;
 }
 
+.sort-th {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  padding: 0;
+}
+
+.sort-th:hover {
+  color: #4f46e5;
+}
+
+.recency-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.recency-fresh {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.recency-recent {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.recency-older {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.recency-stale {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
 .checkbox-col {
   width: 36px;
   text-align: center;

@@ -1,8 +1,28 @@
 import React, { useState, useMemo } from 'react';
-import { Filter, Search, Phone, User, Home, Target, Tag, MapPin, Building2, RotateCcw, Lock, X, CheckCircle2, Loader2, ShoppingCart } from 'lucide-react';
+import { Filter, Search, Phone, User, Home, Target, Tag, MapPin, Building2, RotateCcw, Lock, X, CheckCircle2, Loader2, ShoppingCart, Clock, ArrowUp, ArrowDown } from 'lucide-react';
+import './SellerDashboard.css';
 
 const LEAD_PRICE = 500;
-import './SellerDashboard.css';
+const TODAY = new Date('2026-05-07');
+
+function relativeTime(dateStr) {
+  const d = new Date(dateStr);
+  const days = Math.floor((TODAY - d) / 86400000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
+function recencyBucket(dateStr) {
+  const d = new Date(dateStr);
+  const days = Math.floor((TODAY - d) / 86400000);
+  if (days <= 1) return 'fresh';
+  if (days <= 3) return 'recent';
+  if (days <= 7) return 'older';
+  return 'stale';
+}
 
 const MOCK_LEADS = [
   { id: 'L-1001', name: 'Rahul Sharma', number: '+91 9876543210', price: '₹50L - ₹1Cr', bhk: '2 BHK', type: 'Buy', city: 'Mumbai', locality: 'Andheri West', date: '2026-05-07' },
@@ -117,6 +137,7 @@ const SellerDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [purchased, setPurchased] = useState(new Set());
   const [selected, setSelected] = useState(new Set());
+  const [sortDir, setSortDir] = useState('desc');
   const [modalLeadIds, setModalLeadIds] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState('idle');
 
@@ -180,7 +201,7 @@ const SellerDashboard = () => {
   }, [filters.city]);
 
   const filteredLeads = useMemo(() => {
-    return MOCK_LEADS.filter(lead => {
+    const filtered = MOCK_LEADS.filter(lead => {
       const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesPrice = filters.price ? lead.price === filters.price : true;
       const matchesBhk = filters.bhk ? lead.bhk === filters.bhk : true;
@@ -193,7 +214,14 @@ const SellerDashboard = () => {
 
       return matchesSearch && matchesPrice && matchesBhk && matchesType && matchesCity && matchesLocality && matchesStatus;
     });
-  }, [filters, searchTerm, purchased]);
+
+    return filtered.sort((a, b) => {
+      const diff = new Date(b.date) - new Date(a.date);
+      return sortDir === 'desc' ? diff : -diff;
+    });
+  }, [filters, searchTerm, purchased, sortDir]);
+
+  const toggleSortDir = () => setSortDir(d => d === 'desc' ? 'asc' : 'desc');
 
   const stats = useMemo(() => ({
     total: MOCK_LEADS.length,
@@ -384,6 +412,12 @@ const SellerDashboard = () => {
                     <th><div className="th-content"><Tag size={14} /> Price</div></th>
                     <th><div className="th-content"><Home size={14} /> BHK</div></th>
                     <th><div className="th-content"><Target size={14} /> Intent</div></th>
+                    <th>
+                      <button className="sort-th" onClick={toggleSortDir} title="Sort by date">
+                        <Clock size={14} /> Dropped
+                        {sortDir === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
+                      </button>
+                    </th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -442,6 +476,11 @@ const SellerDashboard = () => {
                             )}
                           </td>
                           <td>
+                            <span className={`recency-badge recency-${recencyBucket(lead.date)}`}>
+                              {relativeTime(lead.date)}
+                            </span>
+                          </td>
+                          <td>
                             <button
                               className={`buy-lead-btn ${isBought ? 'bought' : ''}`}
                               onClick={() => openBuyModal([lead.id])}
@@ -455,7 +494,7 @@ const SellerDashboard = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan="9" className="no-results">
+                      <td colSpan="10" className="no-results">
                         No leads found matching your criteria.
                       </td>
                     </tr>
