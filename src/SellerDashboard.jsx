@@ -414,7 +414,7 @@ const SellerDashboard = () => {
                     <th><div className="th-content"><Target size={14} /> Intent</div></th>
                     <th>
                       <button className="sort-th" onClick={toggleSortDir} title="Sort by date">
-                        <Clock size={14} /> Recency
+                        <Clock size={14} /> Dropped
                         {sortDir === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
                       </button>
                     </th>
