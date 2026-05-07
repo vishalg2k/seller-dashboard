@@ -1,0 +1,61 @@
+name: Update README Screenshot
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  screenshot:
+    if: ${{ github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - run: npm i playwright wait-on --no-save
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Capture screenshot
+        run: |
+          npx vite preview --port 4173 &
+          SERVER_PID=$!
+          npx wait-on http://localhost:4173 --timeout 30000
+          mkdir -p docs
+          node -e "
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch();
+            const page = await browser.newPage({ viewport: { width: 1600, height: 1100 } });
+            await page.goto('http://localhost:4173/seller-dashboard/', { waitUntil: 'networkidle' });
+            await page.screenshot({ path: 'docs/screenshot.png', fullPage: false });
+            await browser.close();
+          })();
+          "
+          kill $SERVER_PID || true
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet docs/screenshot.png; then
+            echo "No screenshot change."
+          else
+            git add docs/screenshot.png
+            git commit -m "chore: refresh README screenshot [skip ci]"
+            git push
+          fi

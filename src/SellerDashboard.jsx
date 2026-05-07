@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Filter, Search, IndianRupee, Phone, User, Home, Target, Tag, MapPin, Building2, RotateCcw, Lock } from 'lucide-react';
+import { Filter, Search, Phone, User, Home, Target, Tag, MapPin, Building2, RotateCcw, Lock, X, CheckCircle2, Loader2, ShoppingCart } from 'lucide-react';
+
+const LEAD_PRICE = 500;
 import './SellerDashboard.css';
 
 const MOCK_LEADS = [
@@ -114,6 +116,9 @@ const SellerDashboard = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [purchased, setPurchased] = useState(new Set());
+  const [selected, setSelected] = useState(new Set());
+  const [modalLeadIds, setModalLeadIds] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState('idle');
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => {
@@ -123,17 +128,46 @@ const SellerDashboard = () => {
     });
   };
 
-  const handleBuy = (id) => {
-    setPurchased(prev => {
+  const toggleSelect = (id) => {
+    setSelected(prev => {
       const next = new Set(prev);
-      next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  };
+
+  const openBuyModal = (ids) => {
+    setModalLeadIds(ids);
+    setPaymentStatus('idle');
+  };
+
+  const closeModal = () => {
+    if (paymentStatus === 'processing') return;
+    setModalLeadIds(null);
+    setPaymentStatus('idle');
+  };
+
+  const handlePay = () => {
+    setPaymentStatus('processing');
+    setTimeout(() => {
+      setPurchased(prev => {
+        const next = new Set(prev);
+        modalLeadIds.forEach(id => next.add(id));
+        return next;
+      });
+      setSelected(prev => {
+        const next = new Set(prev);
+        modalLeadIds.forEach(id => next.delete(id));
+        return next;
+      });
+      setPaymentStatus('done');
+    }, 1600);
   };
 
   const handleReset = () => {
     if (window.confirm('Reset dashboard? Clears purchases and all filters.')) {
       setPurchased(new Set());
+      setSelected(new Set());
       setFilters({ price: '', bhk: '', type: '', city: '', locality: '', status: '' });
       setSearchTerm('');
     }
@@ -197,10 +231,6 @@ const SellerDashboard = () => {
           <p>Manage and purchase your verified leads</p>
         </div>
         <div className="header-right">
-          <div className="lead-cost-badge">
-            <IndianRupee size={16} />
-            <span>500 per lead</span>
-          </div>
           <button className="reset-btn" onClick={handleReset} title="Reset dashboard">
             <RotateCcw size={14} />
             <span>Reset</span>
@@ -221,10 +251,6 @@ const SellerDashboard = () => {
           <div className="stat-card">
             <span className="stat-label">Purchased</span>
             <span className="stat-value">{stats.bought}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Spent</span>
-            <span className="stat-value">₹{stats.bought * 500}</span>
           </div>
         </div>
 
@@ -334,6 +360,24 @@ const SellerDashboard = () => {
               <table className="leads-table">
                 <thead>
                   <tr>
+                    <th className="checkbox-col">
+                      <input
+                        type="checkbox"
+                        checked={
+                          filteredLeads.length > 0 &&
+                          filteredLeads.every(l => purchased.has(l.id) || selected.has(l.id))
+                        }
+                        onChange={(e) => {
+                          const next = new Set(selected);
+                          filteredLeads.forEach(l => {
+                            if (purchased.has(l.id)) return;
+                            if (e.target.checked) next.add(l.id);
+                            else next.delete(l.id);
+                          });
+                          setSelected(next);
+                        }}
+                      />
+                    </th>
                     <th>Lead ID</th>
                     <th><div className="th-content"><User size={14} /> Name</div></th>
                     <th><div className="th-content"><Phone size={14} /> Contact</div></th>
@@ -349,8 +393,17 @@ const SellerDashboard = () => {
                   {filteredLeads.length > 0 ? (
                     filteredLeads.map((lead) => {
                       const isBought = purchased.has(lead.id);
+                      const isSelected = selected.has(lead.id);
                       return (
-                        <tr key={lead.id} className={isBought ? 'row-bought' : ''}>
+                        <tr key={lead.id} className={`${isBought ? 'row-bought' : ''} ${isSelected ? 'row-selected' : ''}`}>
+                          <td className="checkbox-col">
+                            <input
+                              type="checkbox"
+                              disabled={isBought}
+                              checked={isBought || isSelected}
+                              onChange={() => !isBought && toggleSelect(lead.id)}
+                            />
+                          </td>
                           <td className="lead-id">{lead.id}</td>
                           <td className="lead-name">{lead.name}</td>
                           <td className="lead-number">
@@ -394,10 +447,10 @@ const SellerDashboard = () => {
                           <td>
                             <button
                               className={`buy-lead-btn ${isBought ? 'bought' : ''}`}
-                              onClick={() => handleBuy(lead.id)}
+                              onClick={() => openBuyModal([lead.id])}
                               disabled={isBought}
                             >
-                              {isBought ? 'Purchased' : 'Buy (₹500)'}
+                              {isBought ? 'Purchased' : 'Buy'}
                             </button>
                           </td>
                         </tr>
@@ -405,7 +458,7 @@ const SellerDashboard = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan="9" className="no-results">
+                      <td colSpan="10" className="no-results">
                         No leads found matching your criteria.
                       </td>
                     </tr>
@@ -431,8 +484,89 @@ const SellerDashboard = () => {
           </div>
         </div>
       </div>
+
+      {selected.size > 0 && (
+        <div className="bulk-bar">
+          <div className="bulk-info">
+            <ShoppingCart size={18} />
+            <span><strong>{selected.size}</strong> selected</span>
+            <span className="bulk-divider">•</span>
+            <span>Total: <strong>₹{selected.size * LEAD_PRICE}</strong></span>
+          </div>
+          <div className="bulk-actions">
+            <button className="bulk-clear" onClick={() => setSelected(new Set())}>Clear</button>
+            <button className="bulk-buy" onClick={() => openBuyModal([...selected])}>
+              Buy {selected.size} Lead{selected.size > 1 ? 's' : ''}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {modalLeadIds && (
+        <PaymentModal
+          leadIds={modalLeadIds}
+          leads={MOCK_LEADS.filter(l => modalLeadIds.includes(l.id))}
+          status={paymentStatus}
+          onClose={closeModal}
+          onPay={handlePay}
+        />
+      )}
     </div>
   );
 };
+
+function PaymentModal({ leads, status, onClose, onPay }) {
+  const total = leads.length * LEAD_PRICE;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        {status === 'idle' && (
+          <>
+            <div className="modal-head">
+              <h2>Confirm Purchase</h2>
+              <button className="modal-close" onClick={onClose}><X size={18} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="modal-summary">
+                <div className="summary-row"><span>Leads selected</span><strong>{leads.length}</strong></div>
+                <div className="summary-row"><span>Price per lead</span><strong>₹{LEAD_PRICE}</strong></div>
+                <div className="summary-row total"><span>Total payable</span><strong>₹{total}</strong></div>
+              </div>
+              <div className="modal-leads">
+                {leads.map(l => (
+                  <div className="modal-lead-item" key={l.id}>
+                    <span className="modal-lead-id">{l.id}</span>
+                    <span className="modal-lead-name">{l.name}</span>
+                    <span className="modal-lead-loc">{l.locality}, {l.city}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="modal-cancel" onClick={onClose}>Cancel</button>
+              <button className="modal-pay" onClick={onPay}>Pay ₹{total}</button>
+            </div>
+          </>
+        )}
+        {status === 'processing' && (
+          <div className="modal-state">
+            <Loader2 size={48} className="spin" color="#4f46e5" />
+            <h2>Processing payment…</h2>
+            <p>Charging ₹{total} for {leads.length} lead{leads.length > 1 ? 's' : ''}</p>
+          </div>
+        )}
+        {status === 'done' && (
+          <div className="modal-state">
+            <CheckCircle2 size={56} color="#16a34a" />
+            <h2>Payment successful</h2>
+            <p>{leads.length} lead{leads.length > 1 ? 's' : ''} unlocked. Total paid: ₹{total}</p>
+            <button className="modal-pay" onClick={onClose}>Done</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default SellerDashboard;
